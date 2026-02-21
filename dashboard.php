@@ -1,9 +1,9 @@
 <?php
-require "db.php";
-require "auth.php";
+require_once "db.php";
+require_once "auth.php";
 require_login();
 
-$meName = $_SESSION["username"] ?? "User";
+$meName = $_SESSION["display_name"] ?? $_SESSION["username"] ?? "User";
 
 // target user: admin can switch, user always self
 $target_user_id = current_user_id();
@@ -27,15 +27,20 @@ $stmt->close();
 
 $qs = is_admin() ? ("?user_id=" . $target_user_id) : "";
 
-/* ✅ FIX: View Site should open the portfolio of the user admin is editing */
+/* View Site should open the portfolio of the user admin is editing */
 $targetUsername = $_SESSION["username"] ?? "";
-$stmt = $conn->prepare("SELECT username FROM users WHERE id=? LIMIT 1");
+$stmt = $conn->prepare("SELECT username, accent_palette FROM users WHERE id=? LIMIT 1");
 $stmt->bind_param("i", $target_user_id);
 $stmt->execute();
 $tmp = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+
 if (!empty($tmp["username"])) $targetUsername = $tmp["username"];
 $viewSiteUrl = "index.php?u=" . urlencode($targetUsername);
+
+/* palette for the user being edited (default blue) */
+$accentPalette = trim((string)($tmp["accent_palette"] ?? "blue"));
+if ($accentPalette === "") $accentPalette = "blue";
 ?>
 <!doctype html>
 <html lang="en">
@@ -56,6 +61,10 @@ $viewSiteUrl = "index.php?u=" . urlencode($targetUsername);
 
     <div class="topbar-right">
       <a class="pill" href="<?php echo htmlspecialchars($viewSiteUrl); ?>">View Site</a>
+
+      <!-- ✅ Color palette UI (keeps design) -->
+      <div class="palette-bar" id="paletteBar"></div>
+
       <a class="pill pill-ghost" href="logout.php">Logout</a>
 
       <button class="pill pill-ghost" id="themeToggle" type="button">
@@ -82,7 +91,7 @@ $viewSiteUrl = "index.php?u=" . urlencode($targetUsername);
         <div class="dash-stat-num"><?php echo (int)$cnt; ?></div>
         <div class="dash-stat-label">Projects</div>
       </div>
-
+    </div>
   </section>
 
   <!-- Admin user selector -->
@@ -111,15 +120,15 @@ $viewSiteUrl = "index.php?u=" . urlencode($targetUsername);
       </div>
     </section>
   <?php endif; ?>
-  <?php if (is_admin()): ?>
-  <a class="dash-card" href="add_user.php">
-    <div class="dash-icon"></div>
-    <h3 class="dash-card-title">Add User</h3>
-    <p class="dash-card-sub muted">Create new user accounts (admin only).</p>
-    <div class="dash-card-link">Open →</div>
-  </a>
-<?php endif; ?>
 
+  <?php if (is_admin()): ?>
+    <a class="dash-card" href="add_user.php" style="margin-top:14px;display:block">
+      <div class="dash-icon"></div>
+      <h3 class="dash-card-title">Add User</h3>
+      <p class="dash-card-sub muted">Create new user accounts (admin only).</p>
+      <div class="dash-card-link">Open →</div>
+    </a>
+  <?php endif; ?>
 
   <!-- Quick action cards -->
   <section style="margin-top:16px">
@@ -151,10 +160,25 @@ $viewSiteUrl = "index.php?u=" . urlencode($targetUsername);
         <p class="dash-card-sub muted">Change your profile photo shown on the site.</p>
         <div class="dash-card-link">Open →</div>
       </a>
+
+      <a class="dash-card" href="manage_experience.php<?php echo $qs; ?>">
+        <div class="dash-icon"></div>
+        <h3 class="dash-card-title">Manage Experience</h3>
+        <p class="dash-card-sub muted">Add and update work experience.</p>
+        <div class="dash-card-link">Open →</div>
+      </a>
+
+      <a class="dash-card" href="manage_education.php<?php echo $qs; ?>">
+        <div class="dash-icon"></div>
+        <h3 class="dash-card-title">Manage Education</h3>
+        <p class="dash-card-sub muted">Add and update education history.</p>
+        <div class="dash-card-link">Open →</div>
+      </a>
     </div>
   </section>
 </main>
-<!-- Dashboard-only CSS (small & clean, uses your main theme variables) -->
+
+<!-- ✅ keep your dashboard-only CSS exactly as is -->
 <style>
   .dash-hero{
     display:flex;
@@ -250,21 +274,13 @@ $viewSiteUrl = "index.php?u=" . urlencode($targetUsername);
     color: color-mix(in srgb, var(--accent2) 88%, var(--text));
   }
 </style>
-<a class="dash-card" href="manage_experience.php<?php echo $qs; ?>">
-  <div class="dash-icon"></div>
-  <h3 class="dash-card-title">Manage Experience</h3>
-  <p class="dash-card-sub muted">Add and update work experience.</p>
-  <div class="dash-card-link">Open →</div>
-</a>
 
-<a class="dash-card" href="manage_education.php<?php echo $qs; ?>">
-  <div class="dash-icon"></div>
-  <h3 class="dash-card-title">Manage Education</h3>
-  <p class="dash-card-sub muted">Add and update education history.</p>
-  <div class="dash-card-link">Open →</div>
-</a>
-
+<!-- ✅ expose server palette to JS -->
+<script>
+  window.PORTFOLIO_PALETTE = <?php echo json_encode($accentPalette); ?>;
+</script>
 
 <script src="theme.js"></script>
+<script src="palette.js"></script>
 </body>
 </html>

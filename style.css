@@ -1233,3 +1233,68 @@ details.item[open] .item-badge{
   line-height: 1.75;
   font-weight: 850;
 }
+:root{
+  /* ...your existing vars... */
+
+  --accent: #3b82f6;
+  --accent2:#60a5fa;
+}
+
+/* light theme defaults */
+html[data-theme="light"]{
+  /* ...your existing vars... */
+
+  --accent:#2563eb;
+  --accent2:#3b82f6;
+}
+.palette-bar{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.palette-dot{
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  cursor:pointer;
+  box-shadow: var(--shadow2);
+  transition: var(--trans);
+}
+.palette-dot:hover{
+  transform: translateY(-1px);
+  border-color: var(--border2);
+}
+.palette-dot.active{
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border2));
+}
+.palette-bar{ display:flex; gap:10px; align-items:center; }
+.palette-bar{ display:flex; gap:10px; align-items:center; }
+.palette-dot{
+  width:28px; height:28px;
+  border-radius:999px;
+  border: 2px solid rgba(0,0,0,.06);
+  cursor:pointer;
+  box-shadow: var(--shadow2);
+  transition: var(--trans);
+}
+.palette-dot:hover{ transform: translateY(-1px); }
+.palette-dot.active{
+  outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.btn-toggle {
+  background: transparent;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0 10px;
+}
+
+.btn-toggle:hover {
+  text-decoration: underline;
+}

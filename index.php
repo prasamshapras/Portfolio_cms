@@ -23,7 +23,7 @@ if ($username === "") {
 }
 
 /* ✅ fetch display_name too */
-$stmt = $conn->prepare("SELECT id, username, display_name FROM users WHERE username=? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, username, display_name, accent_palette FROM users WHERE username=? LIMIT 1");
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -36,6 +36,10 @@ $userId = (int)$user["id"];
 $displayName = trim((string)($user["display_name"] ?? ""));
 if ($displayName === "") $displayName = (string)$user["username"];
 $initial = strtoupper(mb_substr($displayName ?: "U", 0, 1, "UTF-8"));
+
+/* ✅ palette (default blue) */
+$accentPalette = trim((string)($user["accent_palette"] ?? "blue"));
+if ($accentPalette === "") $accentPalette = "blue";
 
 function getContent(mysqli $conn, int $userId, string $section): string {
   $stmt = $conn->prepare("SELECT content FROM portfolio_content WHERE user_id=? AND section=? LIMIT 1");
@@ -152,6 +156,9 @@ $profileImgUrl = "profile_image.php?u=" . urlencode($username) . "&v=" . time();
       <?php else: ?>
         <a class="pill" href="login.php">Login</a>
       <?php endif; ?>
+
+      <!-- ✅ Color palette UI -->
+      <div class="palette-bar" id="paletteBar"></div>
 
       <button class="pill pill-ghost" id="themeToggle" type="button">
         <span class="theme-label">Dark</span>
@@ -438,7 +445,13 @@ $profileImgUrl = "profile_image.php?u=" . urlencode($username) . "&v=" . time();
 
 </main>
 
+<!-- ✅ expose server palette to JS -->
+<script>
+  window.PORTFOLIO_PALETTE = <?php echo json_encode($accentPalette); ?>;
+</script>
+
 <script src="theme.js"></script>
+<script src="palette.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

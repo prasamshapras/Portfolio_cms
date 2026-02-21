@@ -5,26 +5,43 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-  $username = trim($_POST["username"] ?? "");
+  $username = trim((string)($_POST["username"] ?? ""));
   $password = (string)($_POST["password"] ?? "");
 
-  $stmt = $conn->prepare("SELECT id, username, password_hash, role FROM users WHERE username=? LIMIT 1");
-  $stmt->bind_param("s", $username);
-  $stmt->execute();
-  $res = $stmt->get_result();
-  $row = $res ? $res->fetch_assoc() : null;
-  $stmt->close();
-
-  if ($row && password_verify($password, $row["password_hash"])) {
-    session_regenerate_id(true);
-    $_SESSION["user_id"] = (int)$row["id"];
-    $_SESSION["username"] = (string)$row["username"];
-    $_SESSION["role"] = (string)$row["role"];
-
-    header("Location: dashboard.php");
-    exit;
+  if ($username === "" || $password === "") {
+    $error = "Please enter username and password.";
   } else {
-    $error = "Invalid username or password.";
+    $stmt = $conn->prepare("
+      SELECT id, username, display_name, password_hash, role
+      FROM users
+      WHERE LOWER(username) = LOWER(?)
+      LIMIT 1
+    ");
+
+    if (!$stmt) {
+      $error = "Database error: " . $conn->error;
+    } else {
+      $stmt->bind_param("s", $username);
+      $stmt->execute();
+
+      $stmt->bind_result($id, $uname, $dname, $hash, $role);
+      $found = $stmt->fetch();
+      $stmt->close();
+
+      if ($found && $hash && password_verify($password, $hash)) {
+        session_regenerate_id(true);
+
+        $_SESSION["user_id"]      = (int)$id;
+        $_SESSION["username"]     = (string)$uname;              // login identity (email stored in username)
+        $_SESSION["display_name"] = (string)($dname ?: $uname);  // show this on dashboard
+        $_SESSION["role"]         = (string)$role;
+
+        header("Location: dashboard.php");
+        exit;
+      } else {
+        $error = "Invalid username or password.";
+      }
+    }
   }
 }
 ?>
@@ -33,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Login </title>
+  <title>Login</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="admin-body">
@@ -43,11 +60,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       <div>
         <div class="auth-kicker">Portfolio CMS</div>
         <h2 class="admin-title" style="margin:6px 0 0">Welcome back</h2>
-
       </div>
 
       <button class="theme-toggle" id="themeToggle" type="button" title="Toggle theme">
-         <span class="theme-label">Dark</span>
+        <span class="theme-label">Dark</span>
       </button>
     </div>
 
@@ -57,20 +73,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <form method="post" class="auth-form" autocomplete="on">
       <label class="admin-label" for="username">Username</label>
-      <input class="admin-input" id="username" name="username" required autocomplete="username" />
+      <input
+        class="admin-input"
+        id="username"
+        name="username"
+        required
+        autocomplete="username"
+        value="<?php echo htmlspecialchars($_POST["username"] ?? ""); ?>"
+      />
 
       <label class="admin-label" for="password">Password</label>
       <div class="input-wrap">
         <input class="admin-input" id="password" name="password" type="password" required autocomplete="current-password" />
-        <button class="btn-icon" type="button" id="togglePass" aria-label="Show password" title="Show/Hide">
-          👁
-        </button>
+        <button class="btn-icon" type="button" id="togglePass" aria-label="Show password" title="Show/Hide">👁</button>
       </div>
 
       <button class="admin-btn" type="submit">Login</button>
-
-      <div class="auth-meta">
-      </div>
+      <div class="auth-meta"></div>
     </form>
   </div>
 
